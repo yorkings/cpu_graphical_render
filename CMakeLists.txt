@@ -11,34 +11,36 @@ endif()
 
 # Force executable to the source directory root
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})
-find_package(Vulkan REQUIRED)
+#find_package(Vulkan REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(OpenGL REQUIRED)
 
 # Fetch vk-bootstrap automatically
 include(FetchContent)
-FetchContent_Declare(
-    vk_bootstrap
-    GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap
-    GIT_TAG        v1.3.279 # Use a specific tag for stability
-)
+# FetchContent_Declare(
+#     vk_bootstrap
+#     GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap
+#     GIT_TAG        v1.3.279 # Use a specific tag for stability
+# )
 
-FetchContent_MakeAvailable(vk_bootstrap)
+# FetchContent_MakeAvailable(vk_bootstrap)
 
 find_package(OpenMP REQUIRED)
 set(SOURCE_FILES
-    src/camera.cpp
-    src/functions.cpp
-    src/textures.cpp
+    # src/camera.cpp
+    # src/functions.cpp
+    # src/textures.cpp
 )
 
-add_executable(GraphicsRenderer main.cpp ${SOURCE_FILES})
+add_executable(GraphicsRenderer main.cpp  
+    #${SOURCE_FILES}
+)
 # Apply OpenMP flags and optimization
 target_link_libraries(GraphicsRenderer PRIVATE 
     glfw
-    vk-bootstrap
+    # vk-bootstrap
     OpenGL::GL
-    Vulkan::Vulkan 
+    # Vulkan::Vulkan 
     OpenMP::OpenMP_CXX
 )
 
@@ -70,7 +72,7 @@ if(MSVC)
 else()
     # GCC / Clang
     target_compile_options(GraphicsRenderer PRIVATE -Wall -Wextra)
-    target_compile_options(GraphicsRenderer PRIVATE -march=native -mtune=native -ffast-math)
+    target_compile_options(GraphicsRenderer PRIVATE -march=native -mtune=native -flto -ffast-math)
     
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         target_compile_options(GraphicsRenderer PRIVATE -Wpedantic -Wshadow -g -O0)
