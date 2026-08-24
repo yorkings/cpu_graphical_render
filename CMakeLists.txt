@@ -27,14 +27,13 @@ include(FetchContent)
 
 find_package(OpenMP REQUIRED)
 set(SOURCE_FILES
+    src/constants.cpp
     # src/camera.cpp
     # src/functions.cpp
     # src/textures.cpp
 )
 
-add_executable(GraphicsRenderer main.cpp  
-    #${SOURCE_FILES}
-)
+add_executable(GraphicsRenderer main.cpp  ${SOURCE_FILES})
 # Apply OpenMP flags and optimization
 target_link_libraries(GraphicsRenderer PRIVATE 
     glfw

@@ -3,7 +3,6 @@
 class vec8{
     public:
         smd8 x,y,z;
-
         inline vec8():x(_mm256_setzero_ps()), y(_mm256_setzero_ps()), z(_mm256_setzero_ps()) {}
         inline vec8(smd8 x, smd8 y, smd8 z):x(x), y(y), z(z) {}
         inline vec8(float vx, float vy, float vz):x(_mm256_set1_ps(vx)), y(_mm256_set1_ps(vy)), z(_mm256_set1_ps(vz)) {}

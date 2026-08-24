@@ -1,10 +1,10 @@
 #pragma once
 #include "general.h"
+#include <iostream>
 
 class vec3 {
     public:
         smd4 v;
-
         inline vec3() : v(_mm_setzero_ps()) {}
         inline vec3(float x, float y, float z) : v(_mm_set_ps(0.0f, z, y, x)) {}
         inline vec3(smd4 v) : v(v) {}

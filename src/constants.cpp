@@ -1,4 +1,7 @@
 #include "../headers/general.h"
+#include <iomanip>
+#include <chrono>
+#include <ctime>
 
 std::string get_time_current(){
     auto now =std::chrono::system_clock::now();

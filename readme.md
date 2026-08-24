@@ -1,4 +1,4 @@
-## SIMD RTIOW + PBR  combination Ray Tracing Engine
+# SIMD RTIOW + PBR  combination Ray Tracing Engine
 
 A step-by-step C++ ray tracing engine built from first principles, with SIMD acceleration and physically based rendering techniques.
 
@@ -58,4 +58,7 @@ Before we proceed ensure you already have cmake installed in your pc
 ``` bash
 ./GraphicsRenderer
 ```
+## sampling and optimization
+Russian Roulette and the Power Heuristic cannot be compared as "better" or "worse" because they solve two completely different problems in Monte Carlo path tracing. 
 
+Russian Roulette is a path-length control technique designed to cut compute cycles, whereas the Power Heuristic is a weighting formula used in Multiple Importance Sampling (MIS) designed to reduce image noise
