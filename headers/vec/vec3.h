@@ -1,5 +1,7 @@
 #pragma once
 #include "general.h"
+#include "vec2.h"
+
 #include <iostream>
 
 class vec3 {
@@ -103,5 +105,46 @@ inline vec3 unit_vector(const vec3& v) {
     return vec3(_mm_mul_ps(v.v, nr_refined));
 }
 
+
 using point3 = vec3;
 using color  = vec3;
+
+
+
+inline vec2 oct_encode(const vec3& v) {
+    float abs_x = std::abs(v.x());
+    float abs_y = std::abs(v.y());
+    float abs_z = std::abs(v.z());
+
+    float l1_norm = abs_x + abs_y + abs_z;
+    float inv_l1  = (l1_norm > 1e-9f) ? (1.0f / l1_norm) : 0.0f;
+
+    float u = v.x() * inv_l1;
+    float w = v.y() * inv_l1; // using 'w' for v-component to avoid name clash
+
+    if (v.z() < 0.0f) {
+        float refl_u = (1.0f - std::abs(w)) * (u >= 0.0f ? 1.0f : -1.0f);
+        float refl_w = (1.0f - std::abs(u)) * (w >= 0.0f ? 1.0f : -1.0f);
+        u = refl_u;
+        w = refl_w;
+    }
+
+    return vec2{u, w};
+}
+
+inline vec3 oct_decode(const vec2& uv) {
+    float abs_u = std::abs(uv.u());
+    float abs_v = std::abs(uv.v());
+
+    float z = 1.0f - abs_u - abs_v;
+    float x = uv.u();
+    float y = uv.v();
+
+    if (z < 0.0f) {
+        x = (1.0f - abs_v) * (uv.u() >= 0.0f ? 1.0f : -1.0f);
+        y = (1.0f - abs_u) * (uv.v() >= 0.0f ? 1.0f : -1.0f);
+    }
+
+    return unit_vector(vec3(x, y, z));
+}
+
