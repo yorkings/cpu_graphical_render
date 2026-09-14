@@ -20,7 +20,13 @@ using smd8=__m256;
 using smd8i=__m256i;
 
 constexpr float infinity =std::numeric_limits<float>::infinity();
-constexpr float pi =3.14159265358979323846f;
+constexpr float pi = 3.14159265358979323846;
+constexpr float invpi = 0.31830988618379067154;
+constexpr float inv2pi = 0.15915494309189533577;
+constexpr float inv4pi = 0.07957747154594766788;
+constexpr float piOver2 = 1.57079632679489661923;
+constexpr float piOver4 = 0.78539816339744830961;
+constexpr float sqrt2 = 1.41421356237309504880;
 
 std::string get_time_current();
 
@@ -30,6 +36,9 @@ inline float degrees_to_radians(float theta){
 
 inline smd8 degrees_to_radians_simd8(smd8 degrees) {    
     return _mm256_mul_ps(degrees, _mm256_set1_ps(pi / 180.0f));
+}
+inline smd8 radians_to_degrees_simd8(smd8 rad) {    
+    return _mm256_mul_ps(rad, _mm256_set1_ps(180.0f/pi));
 }
 
 
@@ -77,6 +86,14 @@ inline void seed_rng_simd8_octa(int i, int j, int sample_idx) {
         p[3] ^ 0x6C078965u, p[2] ^ 0x5D588B65u, p[1] ^ 0x41C64E6Du, p[0] ^ 0x997F4A7Bu
     );
 }
+inline smd8 lerp(smd8 a, smd8 b, smd8 t) {
+    //linear interpolation: lerp(a, b, t) = a + t * (b - a)
+    return _mm256_fmadd_ps(t, _mm256_sub_ps(b, a), a);
+}
+
+
+
+
 inline smd8 fast_div(smd8 num, smd8 den) {
     smd8 rcp = _mm256_rcp_ps(den);
     smd8 two = _mm256_set1_ps(2.0f);
@@ -103,6 +120,17 @@ inline smd8 precise_div(smd8 num, smd8 den) {
 
 inline smd8 precise_inv(smd8 dir) {
     return precise_div(_mm256_set1_ps(1.0f), dir);
+}
+
+inline smd8 precise_sqrt(smd8 x) {
+    //newton-Raphson refinement for sqrt(x)
+    smd8 rcp_sqrt = _mm256_rsqrt_ps(x);
+    smd8 half     = _mm256_set1_ps(0.5f);
+    smd8 three    = _mm256_set1_ps(3.0f);
+    smd8 rcp_sqrt_sq = _mm256_mul_ps(rcp_sqrt, rcp_sqrt);
+    smd8 term        = _mm256_fnmadd_ps(x, rcp_sqrt_sq, three);
+    smd8 rcp_sqrt_refined = _mm256_mul_ps(_mm256_mul_ps(half, rcp_sqrt), term);
+    return _mm256_mul_ps(x, rcp_sqrt_refined);
 }
 
 //TRIGONOMETRIc EQUATIONS

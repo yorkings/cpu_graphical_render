@@ -130,16 +130,7 @@ inline vec8 cross(const vec8& u, const vec8& v) {
 
 inline vec8 unit_vector(const vec8& v) {
     smd8 len_sq = v.length_squared();
-    smd8 nr     = _mm256_rsqrt_ps(len_sq);
-    // Newton-Raphson: nr * 0.5 * (3 - len_sq * nr * nr)
-    smd8 half  = _mm256_set1_ps(0.5f);
-    smd8 three = _mm256_set1_ps(3.0f);
-    smd8 nr_sq_len = _mm256_mul_ps(_mm256_mul_ps(len_sq, nr), nr);
-    // (3.0 - nr_sq_len) or  -(nr_sq_len * 1.0) + 3.0
-    smd8 term      = _mm256_fnmadd_ps(nr_sq_len, _mm256_set1_ps(1.0f), three); 
-    smd8 nr_refined = _mm256_mul_ps(_mm256_mul_ps(half, nr), term);
-
-    return v * nr_refined;
+    return v * precise_inv(precise_sqrt(len_sq));
 }
 
 
@@ -148,45 +139,49 @@ inline vec8 precise_inv(const vec8& v) {
 }
 
 
-inline void oct_encode(const vec8& dir, smd8 &out_u, smd8 &out_v) {
+inline vec2_x8 oct_encode(const vec8& dir) {
     smd8 sign_mask = _mm256_set1_ps(-0.0f);
     smd8 abs_x     = _mm256_andnot_ps(sign_mask, dir.x);
     smd8 abs_y     = _mm256_andnot_ps(sign_mask, dir.y);
     smd8 abs_z     = _mm256_andnot_ps(sign_mask, dir.z);
 
     smd8 l1_norm   = _mm256_add_ps(_mm256_add_ps(abs_x, abs_y), abs_z);
-    
-    smd8 u = precise_div(dir.x, l1_norm);
-    smd8 v = precise_div(dir.y, l1_norm);
+
+    vec2_x8 uv(precise_div(dir.x, l1_norm), precise_div(dir.y, l1_norm));
 
     smd8 one       = _mm256_set1_ps(1.0f);
-    smd8 abs_u     = _mm256_andnot_ps(sign_mask, u);
-    smd8 abs_v     = _mm256_andnot_ps(sign_mask, v);
+    smd8 abs_u     = _mm256_andnot_ps(sign_mask, uv.x);
+    smd8 abs_v     = _mm256_andnot_ps(sign_mask, uv.y);
 
-    smd8 refl_u    = _mm256_mul_ps(_mm256_sub_ps(one, abs_v), simd_sign(u));
-    smd8 refl_v    = _mm256_mul_ps(_mm256_sub_ps(one, abs_u), simd_sign(v));
-
+    vec2_x8 refl(_mm256_mul_ps(_mm256_sub_ps(one, abs_v), simd_sign(uv.x)),_mm256_mul_ps(_mm256_sub_ps(one, abs_u), simd_sign(uv.y)));
     smd8 z_lt_0    = _mm256_cmp_ps(dir.z, _mm256_set1_ps(0.0f), _CMP_LT_OQ);
-
-    out_u = _mm256_blendv_ps(u, refl_u, z_lt_0);
-    out_v = _mm256_blendv_ps(v, refl_v, z_lt_0);
+    
+    return blendv(uv, refl, z_lt_0);
 }
 
-inline vec8 oct_decode(smd8 u, smd8 v) {
+inline vec8 oct_decode(const vec2_x8& uv) {
     smd8 sign_mask = _mm256_set1_ps(-0.0f);
     smd8 one       = _mm256_set1_ps(1.0f);
 
-    smd8 abs_u     = _mm256_andnot_ps(sign_mask, u);
-    smd8 abs_v     = _mm256_andnot_ps(sign_mask, v);
+    smd8 abs_u     = _mm256_andnot_ps(sign_mask, uv.x);
+    smd8 abs_v     = _mm256_andnot_ps(sign_mask, uv.y);
 
     smd8 z         = _mm256_sub_ps(one, _mm256_add_ps(abs_u, abs_v));
     smd8 z_lt_0    = _mm256_cmp_ps(z, _mm256_set1_ps(0.0f), _CMP_LT_OQ);
 
-    smd8 refl_x = _mm256_fnmadd_ps(abs_v, simd_sign(u), simd_sign(u));
-    smd8 refl_y = _mm256_fnmadd_ps(abs_u, simd_sign(v), simd_sign(v));
+    smd8 refl_x = _mm256_fnmadd_ps(abs_v, simd_sign(uv.x), simd_sign(uv.x));
+    smd8 refl_y = _mm256_fnmadd_ps(abs_u, simd_sign(uv.y), simd_sign(uv.y));
 
-    smd8 x         = _mm256_blendv_ps(u, refl_x, z_lt_0);
-    smd8 y         = _mm256_blendv_ps(v, refl_y, z_lt_0);
+    smd8 x         = _mm256_blendv_ps(uv.x, refl_x, z_lt_0);
+    smd8 y         = _mm256_blendv_ps(uv.y, refl_y, z_lt_0);
 
     return unit_vector(vec8(x, y, z));
+}
+
+inline vec8 precise_div(const vec8& u, const vec8& v) {
+    return vec8(precise_div(u.x, v.x), precise_div(u.y, v.y), precise_div(u.z, v.z));
+}
+
+inline vec8 lerp(const vec8& a, const vec8& b, smd8 t) {
+    return vec8(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
 }

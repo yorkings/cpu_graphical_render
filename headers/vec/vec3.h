@@ -1,6 +1,6 @@
 #pragma once
 #include "general.h"
-#include "vec2.h"
+#include "vec2_smd8.h"
 
 #include <iostream>
 
