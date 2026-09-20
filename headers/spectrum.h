@@ -1,6 +1,6 @@
 #pragma once
 #include "constants.h"
-#include <cstdint>
+
 
 
 
@@ -36,7 +36,7 @@ struct SampledPayload {
 };
 
 struct DensePayload {
-    const float* values; // Uniformly spaced samples from spec_lamda_min to spec_lamda_max
+    const float* values; 
     float scale;
     float _pad[5];
 };
@@ -99,6 +99,15 @@ struct alignas(32) Spectrum {
     constexpr Spectrum(float c0, float c1, float c2, float scale = 1.0f) noexcept : tag(SpectrumTag::RGBPolynomial), rgb_poly{c0, c1, c2, scale, {}} {}
     constexpr Spectrum(float temperature_k, float scale, bool is_blackbody) noexcept : tag(SpectrumTag::Blackbody), blackbody{temperature_k, scale, {}} { (void)is_blackbody; }
     constexpr Spectrum(IlluminantType type, float scale = 1.0f) noexcept : tag(SpectrumTag::Illuminant), illuminant{type, scale, {}} {}
+   
+    constexpr Spectrum(const float* values, uint32_t count, float l_min, float l_max, float scale = 1.0f) noexcept 
+        : tag(SpectrumTag::Sampled), sampled{values, count, l_min, l_max, scale, {}} {}
+
+    constexpr Spectrum(const float* values, float scale = 1.0f) noexcept 
+        : tag(SpectrumTag::Dense), dense{values, scale, {}} {}
+
+    constexpr Spectrum(const float* lambdas, const float* values, uint32_t count, float scale = 1.0f) noexcept 
+        : tag(SpectrumTag::Piecewise), piecewise{lambdas, values, count, scale, {}} {}
 
     // Static Factory Helpers
     [[nodiscard]] static constexpr Spectrum MakeConstant(float val) noexcept {
@@ -112,8 +121,23 @@ struct alignas(32) Spectrum {
     [[nodiscard]] static constexpr Spectrum MakeRGBPoly(float c0, float c1, float c2, float scale = 1.0f) noexcept {
         return Spectrum(c0, c1, c2, scale);
     }
-};
 
+    [[nodiscard]] static constexpr Spectrum MakeIlluminant(IlluminantType type, float scale = 1.0f) noexcept {
+        return Spectrum(type, scale);
+    }
+
+    [[nodiscard]] static constexpr Spectrum MakeSampled(const float* values, uint32_t count, float l_min, float l_max, float scale = 1.0f) noexcept {
+        return Spectrum(values, count, l_min, l_max, scale);
+    }
+
+    [[nodiscard]] static constexpr Spectrum MakeDense(const float* values, float scale = 1.0f) noexcept {
+        return Spectrum(values, scale);
+    }
+
+    [[nodiscard]] static constexpr Spectrum MakePiecewise(const float* lambdas, const float* values, uint32_t count, float scale = 1.0f) noexcept {
+        return Spectrum(lambdas, values, count, scale);
+    }
+};
 //verification
 static_assert(sizeof(Spectrum) == 32 || sizeof(Spectrum) == 64, "Spectrum container must align to 32/64 byte boundary");
 static_assert(std::is_trivially_copyable_v<Spectrum>, "Spectrum must be trivially copyable for SIMD buffer ops");

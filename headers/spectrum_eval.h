@@ -5,13 +5,7 @@
 
 namespace avx2_spectrum {
     [[nodiscard]] inline smd8 eval_rgb_poly_smd8(const RGBPolynomialPayload& poly, smd8 lambdas_nm) noexcept {
-        smd8 c0 = _mm256_set1_ps(poly.c0);
-        smd8 c1 = _mm256_set1_ps(poly.c1);
-        smd8 c2 = _mm256_set1_ps(poly.c2);
-        // Horner's scheme for c0 + c1*λ + c2*λ^2:
-        smd8 s = _mm256_fmadd_ps(c2, lambdas_nm, c1);
-        s = _mm256_fmadd_ps(s, lambdas_nm, c0);
-        
+        smd8 s=avx2_math::evaluate_poly2(lambdas_nm, _mm256_set1_ps(poly.c2), _mm256_set1_ps(poly.c1), _mm256_set1_ps(poly.c0));        
         return smooth_sigmoid(s);
     }
 

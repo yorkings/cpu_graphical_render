@@ -84,21 +84,18 @@ inline XYZ8 sample_cie2012(smd8 wavelengths_nm) noexcept {
     smd8 x_safe = _mm256_max_ps(linear, _mm256_set1_ps(1e-10f));
     smd8 x_pow = avx2_math::pow_inv_2_4_ps(x_safe);
     smd8 gamma_part = _mm256_fmadd_ps(_mm256_set1_ps(1.055f), x_pow, _mm256_set1_ps(-0.055f));
-    // Select between branches using vector mask
+    
     return _mm256_blendv_ps(gamma_part, branch1, mask);
     
 }
 [[nodiscard]] inline smd8 linear_to_srgb_channel_fast(smd8 x) noexcept {
     x = _mm256_max_ps(x, _mm256_setzero_ps());
-    smd8 s = _mm256_sqrt_ps(x);
+    smd8 s = precise_sqrt(precise_sqrt(x));
     // P(s) ≈ 1.055 * s^(5/3) - 0.055
-    smd8 poly = _mm256_set1_ps(-0.064177f);
-    poly = _mm256_fmadd_ps(poly, s, _mm256_set1_ps(0.222384f));
-    poly = _mm256_fmadd_ps(poly, s, _mm256_set1_ps(0.892095f));
-    poly = _mm256_fmadd_ps(poly, s, _mm256_set1_ps(-0.050302f));
+    smd8 poly = avx2_math::evaluate_poly3(s,_mm256_set1_ps(-0.1328f),_mm256_set1_ps( 0.9465f),_mm256_set1_ps( 0.2581f),_mm256_set1_ps(-0.0720f));
 
     smd8 linear_part = _mm256_mul_ps(x, _mm256_set1_ps(12.92f));
-    smd8 mask = _mm256_cmp_ps(x, _mm256_set1_ps(0.0031308f), _CMP_LE_OQ);
+    smd8 mask = _mm256_cmp_ps(x, _mm256_set1_ps(0.0031308f), _CMP_LE_OS);
     return _mm256_blendv_ps(poly, linear_part, mask);
 }
 

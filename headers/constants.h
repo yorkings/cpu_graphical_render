@@ -12,17 +12,57 @@ constexpr float spec_lamda_max = 830.0f;
 constexpr float spec_lamda_range = spec_lamda_max - spec_lamda_min;
 constexpr float wien_b_nm      = 2897771.955f;    // Wien's displacement constant (nm*K)
 
-inline static smd8 v_zero = _mm256_setzero_ps();
-inline static smd8 v_one  = _mm256_set1_ps(1.0f);
+inline const smd8 v_zero = _mm256_setzero_ps();
+inline const smd8 v_one  = _mm256_set1_ps(1.0f);
+inline const smd8 sign_mask = _mm256_set1_ps(-0.0f);
 
-inline static const smd8 v_C1_scaled      = _mm256_set1_ps(C1_scaled);
-inline static const smd8 v_C2_nm          = _mm256_set1_ps(C2_nm);
-inline static const smd8 v_spec_lamda_min = _mm256_set1_ps(spec_lamda_min);
-inline static const smd8 v_spec_lamda_max = _mm256_set1_ps(spec_lamda_max);
-inline static const smd8 v_spec_lamda_range = _mm256_set1_ps(spec_lamda_range);
+inline const smd8 v_C1_scaled      = _mm256_set1_ps(C1_scaled);
+inline const smd8 v_C2_nm          = _mm256_set1_ps(C2_nm);
+inline const smd8 v_spec_lamda_min = _mm256_set1_ps(spec_lamda_min);
+inline const smd8 v_spec_lamda_max = _mm256_set1_ps(spec_lamda_max);
+inline const smd8 v_spec_lamda_range = _mm256_set1_ps(spec_lamda_range);
 
 
 namespace avx2_math {
+    [[nodiscard]] inline smd8 evaluate_poly2(smd8 x, smd8 c2, smd8 c1, smd8 c0) noexcept {
+        smd8 acc = _mm256_fmadd_ps(c2, x, c1);
+        acc = _mm256_fmadd_ps(acc, x, c0);
+        return acc;
+    }
+
+    [[nodiscard]] inline smd8 evaluate_poly3(smd8 x, smd8 c3, smd8 c2, smd8 c1, smd8 c0) noexcept {
+        smd8 acc = _mm256_fmadd_ps(c3, x, c2);
+        acc = _mm256_fmadd_ps(acc, x, c1);
+        acc = _mm256_fmadd_ps(acc, x, c0);
+        return acc;
+    }
+
+    [[nodiscard]] inline smd8 evaluate_poly4(smd8 x, smd8 c4, smd8 c3, smd8 c2, smd8 c1, smd8 c0) noexcept {
+        smd8 acc = _mm256_fmadd_ps(c4, x, c3);
+        acc = _mm256_fmadd_ps(acc, x, c2);
+        acc = _mm256_fmadd_ps(acc, x, c1);
+        acc = _mm256_fmadd_ps(acc, x, c0);
+        return acc;
+    }
+
+    [[nodiscard]] inline smd8 evaluate_poly5(smd8 x, smd8 c5, smd8 c4, smd8 c3, smd8 c2, smd8 c1, smd8 c0) noexcept {
+        smd8 acc = _mm256_fmadd_ps(c5, x, c4);
+        acc = _mm256_fmadd_ps(acc, x, c3);
+        acc = _mm256_fmadd_ps(acc, x, c2);
+        acc = _mm256_fmadd_ps(acc, x, c1);
+        acc = _mm256_fmadd_ps(acc, x, c0);
+        return acc;
+    }
+    [[nodiscard]] inline smd8 evaluate_poly6(smd8 x, smd8 c6,smd8 c5, smd8 c4, smd8 c3, smd8 c2, smd8 c1, smd8 c0) noexcept {
+        smd8 acc=_mm256_fmadd_ps(c6,x,c5);
+        acc = _mm256_fmadd_ps(acc, x, c4);
+        acc = _mm256_fmadd_ps(acc, x, c3);
+        acc = _mm256_fmadd_ps(acc, x, c2);
+        acc = _mm256_fmadd_ps(acc, x, c1);
+        acc = _mm256_fmadd_ps(acc, x, c0);
+        return acc;
+    }
+
     [[nodiscard]] inline smd8 log2_ps(smd8 x) noexcept {    
        smd8i i = _mm256_castps_si256(x);
        smd8i exp = _mm256_sub_epi32(_mm256_srli_epi32(i, 23), _mm256_set1_epi32(127));
@@ -32,13 +72,9 @@ namespace avx2_math {
        smd8 m = _mm256_castsi256_ps(mant_i);
 
        smd8 m1 = _mm256_sub_ps(m, _mm256_set1_ps(1.0f));
-       smd8 poly = _mm256_set1_ps(0.2418131f);
-        poly = _mm256_fmadd_ps(poly, m1, _mm256_set1_ps(-0.3473055f));
-        poly = _mm256_fmadd_ps(poly, m1, _mm256_set1_ps(0.4786848f));
-        poly = _mm256_fmadd_ps(poly, m1, _mm256_set1_ps(-0.7211658f));
-        poly = _mm256_fmadd_ps(poly, m1, _mm256_set1_ps(1.4426896f));
-        poly = _mm256_mul_ps(poly, m1);
-
+       smd8 poly = evaluate_poly4(m1,_mm256_set1_ps( 0.2418131f),_mm256_set1_ps(-0.3473055f),
+           _mm256_set1_ps( 0.4786848f),_mm256_set1_ps(-0.7211658f),_mm256_set1_ps( 1.4426896f)
+        );
         return _mm256_add_ps(e, poly);
     }
 
@@ -52,15 +88,14 @@ namespace avx2_math {
        smd8i exp_shifted = _mm256_slli_epi32(_mm256_add_epi32(exp_i, _mm256_set1_epi32(127)), 23);
        smd8 pow2_int = _mm256_castsi256_ps(exp_shifted);
         // Minimax polynomial fit for 2^f where f in [0, 1)
-       smd8 poly = _mm256_set1_ps(0.00133336f);
-        poly = _mm256_fmadd_ps(poly, f, _mm256_set1_ps(0.00961592f));
-        poly = _mm256_fmadd_ps(poly, f, _mm256_set1_ps(0.05549068f));
-        poly = _mm256_fmadd_ps(poly, f, _mm256_set1_ps(0.24022651f));
-        poly = _mm256_fmadd_ps(poly, f, _mm256_set1_ps(0.69314718f));
-        poly = _mm256_fmadd_ps(poly, f, _mm256_set1_ps(1.0f));
+       smd8 poly = avx2_math::evaluate_poly5(f,_mm256_set1_ps(0.00133336f),_mm256_set1_ps(0.00961592f),_mm256_set1_ps(0.05549068f),
+            _mm256_set1_ps(0.24022651f),_mm256_set1_ps(0.69314718f),_mm256_set1_ps(1.0f)
+        ); 
+
 
         return _mm256_mul_ps(pow2_int, poly);
     }
+
     [[nodiscard]] inline smd8 pow_inv_2_4_ps(smd8 x) noexcept {
     const smd8 inv_gamma = _mm256_set1_ps(1.0f / 2.4f);
     return exp2_ps(_mm256_mul_ps(log2_ps(x), inv_gamma));
@@ -82,23 +117,11 @@ inline smd8 simd_exp(smd8 v) {
     smd8 C2 = _mm256_set1_ps(1.4286068203094172e-6f);
     smd8 r  = _mm256_fnmadd_ps(k_float, C1, x);
     r       = _mm256_fnmadd_ps(k_float, C2, r);
+    smd8 p = avx2_math::evaluate_poly5(r,_mm256_set1_ps(0.008333333333333333f), _mm256_set1_ps(0.041666666666666664f), _mm256_set1_ps(0.16666666666666666f), 
+        _mm256_set1_ps(0.5f),_mm256_set1_ps(1.0f),_mm256_set1_ps(1.0f)                   
+    );
 
     smd8 r2 = _mm256_mul_ps(r, r);
-    
-    smd8 c5 = _mm256_set1_ps(0.008333333333333333f);
-    smd8 c4 = _mm256_set1_ps(0.041666666666666664f);
-    smd8 c3 = _mm256_set1_ps(0.16666666666666666f);
-    smd8 c2 = _mm256_set1_ps(0.5f);
-    smd8 c1 = _mm256_set1_ps(1.0f);
-    smd8 c0 = _mm256_set1_ps(1.0f);
-
-    smd8 p54 = _mm256_fmadd_ps(c5, r, c4);
-    smd8 p32 = _mm256_fmadd_ps(c3, r, c2);
-    smd8 p10 = _mm256_fmadd_ps(c1, r, c0);
-
-    smd8 p52 = _mm256_fmadd_ps(p54, r2, p32);
-    smd8 p   = _mm256_fmadd_ps(p52, r2, p10);
-
     smd8i pow2k_int = _mm256_slli_epi32(_mm256_add_epi32(k_int, _mm256_set1_epi32(127)), 23);
     smd8  pow2k     = _mm256_castsi256_ps(pow2k_int);
 
@@ -160,21 +183,12 @@ inline smd8 simd_log(smd8 v) {
     e_float      = _mm256_blendv_ps(e_float, _mm256_add_ps(e_float, _mm256_set1_ps(1.0f)), mask);
 
     smd8 u  = _mm256_sub_ps(m, _mm256_set1_ps(1.0f));
-    smd8 u2 = _mm256_mul_ps(u, u);
 
-    smd8 c5 = _mm256_set1_ps( 0.1536257077f);
-    smd8 c4 = _mm256_set1_ps(-0.2192938883f);
-    smd8 c3 = _mm256_set1_ps( 0.3211822365f);
-    smd8 c2 = _mm256_set1_ps(-0.4998741238f);
-    smd8 c1 = _mm256_set1_ps( 0.9999964239f);
-
-    smd8 p54 = _mm256_fmadd_ps(c5, u, c4);
-    smd8 p32 = _mm256_fmadd_ps(c3, u, c2);
+    smd8 q= avx2_math::evaluate_poly5(u,_mm256_set1_ps(-0.2302894f),_mm256_set1_ps(0.1908169f),_mm256_set1_ps(-0.2505905f),
+        _mm256_set1_ps(0.3333164f),_mm256_set1_ps(-0.5000002f),_mm256_set1_ps(1.0f)
+    );
     
-    smd8 p52 = _mm256_fmadd_ps(p54, u2, p32);
-    smd8 p   = _mm256_fmadd_ps(p52, u2, c1);
-    p        = _mm256_mul_ps(p, u);
-
+    smd8 p = _mm256_mul_ps(q, u); 
     smd8 ln2 = _mm256_set1_ps(0.69314718056f);
     smd8 res = _mm256_fmadd_ps(e_float, ln2, p);
 

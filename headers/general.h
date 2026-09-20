@@ -10,6 +10,7 @@
 #include<cstdlib>
 #include <atomic>
 #include<vector>
+#include <cstdint>
 
 using std::make_shared;
 using std::shared_ptr;
@@ -87,7 +88,6 @@ inline void seed_rng_simd8_octa(int i, int j, int sample_idx) {
     );
 }
 inline smd8 lerp(smd8 a, smd8 b, smd8 t) {
-    //linear interpolation: lerp(a, b, t) = a + t * (b - a)
     return _mm256_fmadd_ps(t, _mm256_sub_ps(b, a), a);
 }
 
@@ -109,8 +109,7 @@ inline smd8 precise_div(smd8 num, smd8 den) {
     smd8 val_sign  = _mm256_and_ps(den, sign_bit);
     smd8 signed_eps= _mm256_or_ps(eps, val_sign);
     smd8 safe_den  = _mm256_blendv_ps(den, signed_eps, is_invalid);
-
-    // FMA3 Newton-Raphson Refinement for exact single-precision reciprocal
+    // FMA3 Newton-Raphson Refinement 
     smd8 x0  = _mm256_rcp_ps(safe_den); 
     smd8 one = _mm256_set1_ps(1.0f);
     smd8 e   = _mm256_fnmadd_ps(safe_den, x0, one);
@@ -123,7 +122,6 @@ inline smd8 precise_inv(smd8 dir) {
 }
 
 inline smd8 precise_sqrt(smd8 x) {
-    //newton-Raphson refinement for sqrt(x)
     smd8 rcp_sqrt = _mm256_rsqrt_ps(x);
     smd8 half     = _mm256_set1_ps(0.5f);
     smd8 three    = _mm256_set1_ps(3.0f);
@@ -209,8 +207,8 @@ inline smd8 simd_atan2(smd8 y, smd8 x) {
     smd8 ratio   = precise_div(y, x);
     smd8 atan_r  = simd_atan(ratio);
 
-    smd8 x_lt_0  = _mm256_cmp_ps(x, _mm256_set1_ps(0.0f), _CMP_LT_OQ);
-    smd8 y_ge_0  = _mm256_cmp_ps(y, _mm256_set1_ps(0.0f), _CMP_GE_OQ);
+    smd8 x_lt_0  = _mm256_cmp_ps(x, _mm256_set1_ps(0.0f), _CMP_LT_OS);
+    smd8 y_ge_0  = _mm256_cmp_ps(y, _mm256_set1_ps(0.0f), _CMP_GE_OS);
 
     smd8 offset  = _mm256_blendv_ps(_mm256_set1_ps(-3.14159265359f), pi_vec, y_ge_0);
     offset       = _mm256_and_ps(offset, x_lt_0);
