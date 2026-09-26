@@ -12,9 +12,7 @@ constexpr float spec_lamda_max = 830.0f;
 constexpr float spec_lamda_range = spec_lamda_max - spec_lamda_min;
 constexpr float wien_b_nm      = 2897771.955f;    // Wien's displacement constant (nm*K)
 
-inline const smd8 v_zero = _mm256_setzero_ps();
-inline const smd8 v_one  = _mm256_set1_ps(1.0f);
-inline const smd8 sign_mask = _mm256_set1_ps(-0.0f);
+
 
 inline const smd8 v_C1_scaled      = _mm256_set1_ps(C1_scaled);
 inline const smd8 v_C2_nm          = _mm256_set1_ps(C2_nm);

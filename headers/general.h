@@ -29,6 +29,10 @@ constexpr float piOver2 = 1.57079632679489661923;
 constexpr float piOver4 = 0.78539816339744830961;
 constexpr float sqrt2 = 1.41421356237309504880;
 
+inline const smd8 v_zero = _mm256_setzero_ps();
+inline const smd8 v_one  = _mm256_set1_ps(1.0f);
+inline const smd8 sign_mask = _mm256_set1_ps(-0.0f);
+
 std::string get_time_current();
 
 inline float degrees_to_radians(float theta){

@@ -9,9 +9,9 @@ enum class CameraType : uint8_t { Perspective, Orthographic, Fisheye, Spherical,
 struct CameraSample{
  vec2_x8 pfilm;
  vec2_x8 lens;
- smd8 time;
- smd8 weight;
- smd8i medium_id;
+ smd8 time=v_zero;
+ smd8 weight=v_one;
+ smd8i medium_id=_mm256_set1_epi32(0);
 };
 
 struct CameraRay {
@@ -32,5 +32,16 @@ struct Camera{
     float dx_scale       = 1.0f;
     float dy_scale       = 1.0f;
     
+};
+
+struct Camera{
+    CameraType type=CameraType::Perspective;
+    //AnimatedTransform cam_to_world;      
+    float lens_radius    = 0.0f;
+    float focal_distance = 10.0f;
+    float fov            = 90.0f;    
+    // Raster-to-Camera space conversion constants
+    float dx_scale       = 1.0f;
+    float dy_scale       = 1.0f;    
 };
 
