@@ -11,6 +11,7 @@
 #include <atomic>
 #include<vector>
 #include <cstdint>
+#include <type_traits>
 
 using std::make_shared;
 using std::shared_ptr;
@@ -22,6 +23,8 @@ using smd8i=__m256i;
 
 constexpr float infinity =std::numeric_limits<float>::infinity();
 constexpr float pi = 3.14159265358979323846;
+constexpr float e  = 2.71828182845904523536;
+constexpr float two_pi = 6.28318530717958647692;
 constexpr float invpi = 0.31830988618379067154;
 constexpr float inv2pi = 0.15915494309189533577;
 constexpr float inv4pi = 0.07957747154594766788;
@@ -29,11 +32,49 @@ constexpr float piOver2 = 1.57079632679489661923;
 constexpr float piOver4 = 0.78539816339744830961;
 constexpr float sqrt2 = 1.41421356237309504880;
 
+inline const smd8 pi_simd8 = _mm256_set1_ps(pi);
+inline const smd8 invpi_simd8 = _mm256_set1_ps(invpi);
+inline const smd8 inv2pi_simd8 = _mm256_set1_ps(inv2pi);
+inline const smd8 inv4pi_simd8 = _mm256_set1_ps(inv4pi);
+inline const smd8 piOver2_simd8 = _mm256_set1_ps(piOver2);
+inline const smd8 piOver4_simd8 = _mm256_set1_ps(piOver4);
+inline const smd8 two_pi_simd8 = _mm256_set1_ps(two_pi);
+
+
 inline const smd8 v_zero = _mm256_setzero_ps();
 inline const smd8 v_one  = _mm256_set1_ps(1.0f);
+inline const smd8 v_neg_one  =_mm256_set1_ps(-1.0f);
 inline const smd8 sign_mask = _mm256_set1_ps(-0.0f);
 
+inline smd8 clamp(smd8 v, smd8 low, smd8 high) {
+    return _mm256_max_ps(low, _mm256_min_ps(v, high));
+}
+
+inline smd8 simd_sign(const smd8& v) {
+    smd8 sign_bit = _mm256_and_ps(v, _mm256_set1_ps(-0.0f)); 
+    return _mm256_or_ps(_mm256_set1_ps(1.0f), sign_bit);
+}
+
+
 std::string get_time_current();
+
+
+template <typename T>
+inline smd8i set1_id(T value) {
+    return _mm256_set1_epi32(static_cast<int32_t>(value));
+}
+
+template <typename T>
+inline void set_id(smd8i& target_field, T value, smd8 hit_mask) {
+    smd8i val_vec  = _mm256_set1_epi32(static_cast<int32_t>(value));
+    smd8i mask_vec = _mm256_castps_si256(hit_mask);
+    target_field = _mm256_blendv_epi8(target_field, val_vec, mask_vec);
+}
+
+inline void blend_id(smd8i& target_field, smd8i source_ids, smd8 hit_mask) {
+    smd8i mask_vec = _mm256_castps_si256(hit_mask);
+    target_field = _mm256_blendv_epi8(target_field, source_ids, mask_vec);
+}
 
 inline float degrees_to_radians(float theta){
     return theta*(pi/180.0f);
@@ -96,6 +137,15 @@ inline smd8 lerp(smd8 a, smd8 b, smd8 t) {
 }
 
 
+inline smd8 invlerp(smd8 x, smd8 x_min, smd8 x_max) {
+    smd8 num = _mm256_sub_ps(x, x_min);
+    smd8 den = _mm256_sub_ps(x_max, x_min);
+    return precise_div(num, den);
+}
+
+inline smd8 blendv(smd8 a, smd8 b,smd8 mask){
+    return _mm256_blendv_ps(a,b,mask);
+}
 
 
 inline smd8 fast_div(smd8 num, smd8 den) {
@@ -177,6 +227,17 @@ inline void sincos_simd8(smd8 x, smd8 &out_sin, smd8 &out_cos) {
     out_sin = _mm256_xor_ps(sin_val, sin_sign);
     out_cos = _mm256_xor_ps(cos_val, cos_sign);
 }
+inline smd8 simd_sin(smd8 x) {
+    smd8 s, c;
+    sincos_simd8(x, s, c);
+    return s;
+}
+
+inline smd8 simd_cos(smd8 x) {
+    smd8 s, c;
+    sincos_simd8(x, s, c);
+    return c;
+}
 
 inline smd8 simd_tan(smd8 x) {
     smd8 s, c;
@@ -205,6 +266,7 @@ inline smd8 simd_atan(smd8 x) {
 
     return _mm256_xor_ps(res, sign);
 }
+
 
 inline smd8 simd_atan2(smd8 y, smd8 x) {
     smd8 pi_vec  = _mm256_set1_ps(pi);

@@ -39,3 +39,35 @@ inline void load_aos_transpose8x8(const float* ptr,smd8& c0, smd8& c1, smd8& c2,
     c7 = _mm256_permute2f128_ps(v3, v7, 0x31); // Field 7
 }
 
+inline void load_aos_transpose9x8(const float* ptr, smd8& c0, smd8& c1, smd8& c2, smd8& c3, smd8& c4, smd8& c5, smd8& c6, smd8& c7, smd8& c8) {   
+    smd8 r0 = _mm256_loadu_ps(ptr +  0);
+    smd8 r1 = _mm256_loadu_ps(ptr +  8);
+    smd8 r2 = _mm256_loadu_ps(ptr + 16);
+    smd8 r3 = _mm256_loadu_ps(ptr + 24);
+    smd8 r4 = _mm256_loadu_ps(ptr + 32);
+    smd8 r5 = _mm256_loadu_ps(ptr + 40);
+    smd8 r6 = _mm256_loadu_ps(ptr + 48);
+    smd8 r7 = _mm256_loadu_ps(ptr + 56);
+    smd8 r8 = _mm256_loadu_ps(ptr + 64);
+
+ 
+    const smd8i idx0 = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
+    const smd8i idx1 = _mm256_setr_epi32(1, 2, 3, 4, 5, 6, 7, 0);
+    const smd8i idx2 = _mm256_setr_epi32(2, 3, 4, 5, 6, 7, 0, 1);
+    const smd8i idx3 = _mm256_setr_epi32(3, 4, 5, 6, 7, 0, 1, 2);
+    const smd8i idx4 = _mm256_setr_epi32(4, 5, 6, 7, 0, 1, 2, 3);
+    const smd8i idx5 = _mm256_setr_epi32(5, 6, 7, 0, 1, 2, 3, 4);
+    const smd8i idx6 = _mm256_setr_epi32(6, 7, 0, 1, 2, 3, 4, 5);
+    const smd8i idx7 = _mm256_setr_epi32(7, 0, 1, 2, 3, 4, 5, 6);
+
+    c0 = _mm256_blend_ps(_mm256_permutevar8x32_ps(r0, idx0), _mm256_permutevar8x32_ps(r7, idx7), 0x80);
+    c1 = _mm256_blend_ps(_mm256_permutevar8x32_ps(r0, idx1), _mm256_permutevar8x32_ps(r8, idx0), 0x80);
+    c2 = _mm256_blend_ps(_mm256_permutevar8x32_ps(r0, idx2), _mm256_permutevar8x32_ps(r8, idx1), 0x80);
+    c3 = _mm256_blend_ps(_mm256_permutevar8x32_ps(r0, idx3), _mm256_permutevar8x32_ps(r8, idx2), 0x80);
+    c4 = _mm256_blend_ps(_mm256_permutevar8x32_ps(r0, idx4), _mm256_permutevar8x32_ps(r8, idx3), 0x80);
+    c5 = _mm256_blend_ps(_mm256_permutevar8x32_ps(r0, idx5), _mm256_permutevar8x32_ps(r8, idx4), 0x80);
+    c6 = _mm256_blend_ps(_mm256_permutevar8x32_ps(r0, idx6), _mm256_permutevar8x32_ps(r8, idx5), 0x80);
+    c7 = _mm256_blend_ps(_mm256_permutevar8x32_ps(r0, idx7), _mm256_permutevar8x32_ps(r8, idx6), 0x80);
+    c8 = _mm256_blend_ps(_mm256_permutevar8x32_ps(r1, idx0), _mm256_permutevar8x32_ps(r8, idx7), 0x80);
+}
+

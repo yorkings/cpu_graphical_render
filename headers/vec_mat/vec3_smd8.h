@@ -1,12 +1,6 @@
 #pragma once
 #include "vec3.h"
 
-inline smd8 simd_sign(smd8 v) {
-    smd8 sign_mask = _mm256_set1_ps(-0.0f);
-    smd8 one       = _mm256_set1_ps(1.0f);
-    return _mm256_or_ps(one, _mm256_and_ps(v, sign_mask));
-}
-
 class vec8{
     public:
         smd8 x,y,z;
@@ -113,6 +107,8 @@ inline vec8 operator*(smd8 s, const vec8& v) {
 inline vec8 operator*(const vec8& v, smd8 s) { return s * v; }
 inline vec8 operator*(float s, const vec8& v) { return _mm256_set1_ps(s) * v; }
 inline vec8 operator*(const vec8& v, float s) { return s * v; }
+inline vec8 operator/(const vec8 &v,float s){return v * _mm256_set1_ps(1.0f/s);}
+inline vec8 operator/(const vec8 &v,smd8 s){return v * precise_inv(s);}
 
 inline smd8 dot(const vec8& u, const vec8& v) {
     smd8 xx = _mm256_mul_ps(u.x, v.x);
@@ -139,7 +135,7 @@ inline vec8 precise_inv(const vec8& v) {
 }
 
 
-inline vec2_x8 oct_encode(const vec8& dir) {
+inline vec2x8 oct_encode(const vec8& dir) {
     smd8 sign_mask = _mm256_set1_ps(-0.0f);
     smd8 abs_x     = _mm256_andnot_ps(sign_mask, dir.x);
     smd8 abs_y     = _mm256_andnot_ps(sign_mask, dir.y);
@@ -147,19 +143,19 @@ inline vec2_x8 oct_encode(const vec8& dir) {
 
     smd8 l1_norm   = _mm256_add_ps(_mm256_add_ps(abs_x, abs_y), abs_z);
 
-    vec2_x8 uv(precise_div(dir.x, l1_norm), precise_div(dir.y, l1_norm));
+    vec2x8 uv(precise_div(dir.x, l1_norm), precise_div(dir.y, l1_norm));
 
     smd8 one       = _mm256_set1_ps(1.0f);
     smd8 abs_u     = _mm256_andnot_ps(sign_mask, uv.x);
     smd8 abs_v     = _mm256_andnot_ps(sign_mask, uv.y);
 
-    vec2_x8 refl(_mm256_mul_ps(_mm256_sub_ps(one, abs_v), simd_sign(uv.x)),_mm256_mul_ps(_mm256_sub_ps(one, abs_u), simd_sign(uv.y)));
+    vec2x8 refl(_mm256_mul_ps(_mm256_sub_ps(one, abs_v), simd_sign(uv.x)),_mm256_mul_ps(_mm256_sub_ps(one, abs_u), simd_sign(uv.y)));
     smd8 z_lt_0    = _mm256_cmp_ps(dir.z, _mm256_set1_ps(0.0f), _CMP_LT_OQ);
     
     return blendv(uv, refl, z_lt_0);
 }
 
-inline vec8 oct_decode(const vec2_x8& uv) {
+inline vec8 oct_decode(const vec2x8& uv) {
     smd8 sign_mask = _mm256_set1_ps(-0.0f);
     smd8 one       = _mm256_set1_ps(1.0f);
 
@@ -184,4 +180,7 @@ inline vec8 precise_div(const vec8& u, const vec8& v) {
 
 inline vec8 lerp(const vec8& a, const vec8& b, smd8 t) {
     return vec8(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
+}
+inline vec8 blendv(const vec8& a, const vec8& b, smd8 mask) {
+    return vec8(_mm256_blendv_ps(a.x, b.x, mask), _mm256_blendv_ps(a.y, b.y, mask), _mm256_blendv_ps(a.z, b.z, mask));
 }
